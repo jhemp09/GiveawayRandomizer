@@ -112,9 +112,9 @@ export default function Wheel({ users }: { users: UniqueUser[] }) {
             transform: "translateX(-50%)",
             width: 0,
             height: 0,
-            borderLeft: "10px solid transparent",
-            borderRight: "10px solid transparent",
-            borderTop: "16px solid #222",
+            borderLeft: "3px solid transparent",
+            borderRight: "3px solid transparent",
+            borderTop: "12px solid #222",
           }}
         />
         <canvas
