@@ -71,8 +71,12 @@ export default function Wheel({ users }: { users: UniqueUser[] }) {
     const sliceCenter = winnerIndex * slice + slice / 2;
     const extraSpins = 5 * 360;
     const startRotation = rotationRef.current;
-    const targetTotal =
-      startRotation + extraSpins + (360 - ((startRotation + 360 - sliceCenter) % 360));
+    // Pointer sits at the top of the wheel, which is screen angle 270 in
+    // canvas-rotation terms (0 = right, 90 = down, 180 = left, 270 = up).
+    const pointerAngle = 270;
+    const targetMod = (((pointerAngle - sliceCenter) % 360) + 360) % 360;
+    const deltaToTarget = (((targetMod - startRotation) % 360) + 360) % 360;
+    const targetTotal = startRotation + extraSpins + deltaToTarget;
     const delta = targetTotal - startRotation;
     const duration = 3200;
     const startTime = performance.now();
