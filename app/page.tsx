@@ -13,17 +13,62 @@ function GiveawayPage() {
   const [inputValue, setInputValue] = useState(videoFromQuery);
   const [users, setUsers] = useState<UniqueUser[]>([]);
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
+
+  async function loadFromSupabase(url: string) {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getUniqueCommenters(url);
+      setUsers(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load commenters.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
     if (!videoUrl) return;
-    setLoading(true);
-    setError(null);
-    getUniqueCommenters(videoUrl)
-      .then((data) => setUsers(data))
-      .catch((err) => setError(err.message ?? "Failed to load commenters."))
-      .finally(() => setLoading(false));
+    loadFromSupabase(videoUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoUrl]);
+
+  async function handleLoad() {
+    const url = inputValue.trim();
+    if (!url) return;
+
+    setVideoUrl(url);
+    setFetching(true);
+    setStatus("Fetching latest comments from TikTok...");
+    setError(null);
+
+    try {
+      const res = await fetch("/api/fetch-comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ video_url: url }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error ?? "Fetch failed.");
+        setStatus(null);
+      } else {
+        setStatus(
+          `Fetched ${data.comments_fetched} comment(s), ${data.unique_commenters} unique commenter(s).`
+        );
+        await loadFromSupabase(url);
+      }
+    } catch {
+      setError("Could not reach the fetcher.");
+      setStatus(null);
+    } finally {
+      setFetching(false);
+    }
+  }
 
   return (
     <main className="mx-auto flex max-w-md flex-col items-center gap-6 px-4 py-10">
@@ -38,13 +83,15 @@ function GiveawayPage() {
           className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
         />
         <button
-          onClick={() => setVideoUrl(inputValue)}
-          className="rounded-lg border border-gray-400 bg-white px-4 py-2 text-sm"
+          onClick={handleLoad}
+          disabled={fetching}
+          className="rounded-lg border border-gray-400 bg-white px-4 py-2 text-sm disabled:opacity-50"
         >
-          Load
+          {fetching ? "Fetching..." : "Load"}
         </button>
       </div>
 
+      {status && <p className="text-sm text-gray-500">{status}</p>}
       {loading && <p className="text-sm text-gray-500">Loading commenters...</p>}
       {error && <p className="text-sm text-red-600">{error}</p>}
       {!loading && !error && videoUrl && <Wheel users={users} />}
